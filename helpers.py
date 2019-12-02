@@ -13,6 +13,7 @@ from langdetect import detect
 import re
 
 
+# haha packages
 import pandas as pd
 import spacy
 import en_core_web_sm
@@ -28,6 +29,47 @@ class data_process:
     def __init__(self):
         self.root_dir = "CrisisLexT26/"
         self.count = 0
+        self.natural_disasters = []
+        self.non_natural_disasters = []
+
+        self.prep_natural_disasters = []
+        self.prep_non_natural_disasters = []
+
+        self.nat_labels = []
+        self.non_natural_labels = []
+
+        self.en_prep_nat_tweets = []
+        self.en_prep_non_nat_tweets = []
+
+        self.text_processor = TextPreProcessor(
+            # terms that will be normalized
+            normalize=['url', 'email', 'percent', 'money', 'phone', 'user',
+                'time', 'url', 'date', 'number'],
+            # terms that will be annotated
+            annotate={"hashtag", "allcaps", "elongated", "repeated",
+                'emphasis', 'censored'},
+            fix_html=True,  # fix HTML tokens
+    
+            # corpus from which the word statistics are going to be used 
+            # for word segmentation 
+            segmenter="twitter",
+
+            # corpus from which the word statistics are going to be used 
+            # for spell correction
+            corrector="twitter",
+
+            unpack_hashtags=True,  # perform word segmentation on hashtags
+            unpack_contractions=True,  # Unpack contractions (can't -> can not)
+            spell_correct_elong=True,  # spell correction for elongated words
+    
+            # select a tokenizer. You can use SocialTokenizer, or pass your own
+            # the tokenizer, should take as input a string and return a list of tokens
+            tokenizer=SocialTokenizer(lowercase=True).tokenize,
+
+            # list of dictionaries, for replacing tokens extracted from the text,
+            # with other expressions. You can pass more than one dictionaries.
+            dicts=[emoticons]
+        )
 
     """
         Load headlines info and replace the edit word in the original headline, resulting the
@@ -56,7 +98,7 @@ class data_process:
         if d_set == 'train':
             new_dict = {'id':pd_file['id'], 'original':prep_original, 'edited':prep_edited_text, 'meanGrade':pd_file['meanGrade']}
         else:
-            new_dict = {'id':pd_file['id'], 'original':prep_original, 'edited':prep_edited_text, 'meanGrade':[0.9355] * len(prep_original)}
+            new_dict = {'id':pd_file['id'], 'original':prep_original, 'edited':prep_edited_text, 'meanGrade':[0.9355712114932938] * len(prep_original)}
 
         df = pd.DataFrame(new_dict)
         # Save the dataframe 
@@ -82,7 +124,14 @@ class data_process:
 #           new_headline = re.sub(to_replace, '', new_headline)
             new_original = re.sub(to_replace, '', pd_file['original'][i])
 
+            #prep_edited_text.append(new_headline)
             original.append(new_original)
+
+        #new_dict = {'id':original}
+
+        #df = pd.DataFrame(new_dict)
+        # Save the dataframe 
+        #df.to_csv(new_fname)
 
         return original
 
@@ -116,6 +165,18 @@ class data_process:
         pd_file = pd.read_csv(csv_file)
 
         return pd_file['original'].tolist(), pd_file['edited'].tolist(), pd_file['meanGrade'].tolist()
+
+
+    """
+        Load original/edited = preprocessed text.
+    """
+    def load_edited_test_csv(self, csv_file):
+        pd_file = pd.read_csv(csv_file)
+
+        return pd_file['original'].tolist(), pd_file['edited'].tolist()
+
+
+
 
     """
         Return the hlines ids for the test dataset
@@ -151,13 +212,15 @@ class data_process:
                     min_len = len(spl)
 
 
-            mean = total_words / len(orig_hline)
-            print("mean" + str(mean))
+            media = total_words / len(orig_hline)
+            print("media")
+            print(media)
             print("max len ")
             print(max_len)
             print("min len ")
             print(min_len)
             sys.exit()
+
 
         combined_hline = [orig + " separatorSeparator " + edited for orig, edited in zip(orig_hline, edit_hline)]
         return combined_hline, grade
@@ -228,6 +291,10 @@ class data_process:
             #line = re.sub('[-—|\[\]!?()“”,’…\'.:";]', '', line)
 
             prep = sentence
+            #save_to_file.append(h_lines[i])
+            #save_to_file.append(prep)
+
+            #save_to_file.append(' ')
             
             prep_h_lines.append(prep)
 
@@ -255,6 +322,7 @@ class data_process:
     """
     def write_meanGrade_col(self, csv_file, meaGrade_col):
         pd_file = pd.read_csv(csv_file)
+#        num_rows = len(pd_file['id'])
         pd_file['meanGrade'] = meanGrade_col
         pd_file.to_csv("../data/task-1/dev_meanGrade.csv")
 
